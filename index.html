@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch Nhậu Chonngay</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-firestore-compat.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #eceff1; color: #333; }
+        .container { max-width: 450px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #e64a19; margin-bottom: 20px; text-transform: uppercase; }
+        label { font-weight: bold; font-size: 14px; }
+        input, button { width: 100%; padding: 12px; margin: 8px 0 20px 0; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; font-size: 16px; }
+        button { background: #2e7d32; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #1b5e20; }
+        .list-section { margin-top: 20px; border-top: 2px solid #eee; padding-top: 10px; }
+        .list-item { background: #fffde7; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 6px solid #fbc02d; display: flex; justify-content: space-between; align-items: center; }
+        .info { flex-grow: 1; }
+        .info strong { color: #1565c0; font-size: 18px; }
+        .edit-btn { width: auto; padding: 6px 12px; background: #0288d1; margin: 0; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="form-top">
+    <h2>🍻 KÈO NHẬU ANH EM</h2>
+    
+    <label>Tên anh em:</label>
+    <input type="text" id="userName" placeholder="Ví dụ: Đáng đẹp trai...">
+    
+    <label>Ngày & Giờ nhậu:</label>
+    <input type="datetime-local" id="userTime">
+    
+    <button onclick="saveData()">XÁC NHẬN ĐI NHẬU</button>
+
+    <div class="list-section">
+        <h3>📍 Danh sách báo danh:</h3>
+        <div id="dataList">Đang kết nối database...</div>
+    </div>
+</div>
+
+<script>
+    // CẤU HÌNH FIREBASE CỦA ĐÁNG ĐÃ HOÀN THIỆN
+    const firebaseConfig = {
+      apiKey: "AIzaSyDtwQeujQNc9pP_HsGjd5iF51WAlv_OaBY",
+      authDomain: "chonngay-bc2ef.firebaseapp.com",
+      projectId: "chonngay-bc2ef",
+      storageBucket: "chonngay-bc2ef.firebasestorage.app",
+      messagingSenderId: "326020235650",
+      appId: "1:326020235650:web:17b0f32a3ebc0a28fd4f9b",
+      measurementId: "G-NJ0959QNGS"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // 1. Hàm Lưu dữ liệu & Tự động xóa trắng ô nhập
+    function saveData() {
+        const name = document.getElementById('userName').value.trim();
+        const time = document.getElementById('userTime').value;
+
+        if (!name || !time) {
+            alert("Đáng ơi, nhập đủ tên với giờ mới nhậu được chứ!");
+            return;
+        }
+
+        // Dùng tên làm ID luôn để nếu trùng tên nó sẽ ghi đè (cập nhật)
+        db.collection("lich-nhau").doc(name).set({
+            name: name,
+            time: time,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .then(() => {
+            alert("Báo danh thành công! Chuẩn bị mồi thôi!");
+            // XÓA TRẮNG Ô NHẬP SAU KHI GỬI
+            document.getElementById('userName').value = "";
+            document.getElementById('userTime').value = "";
+        })
+        .catch((error) => {
+            alert("Lỗi rồi Đáng ơi: " + error.message);
+        });
+    }
+
+    // 2. Tự động hiển thị danh sách mới nhất
+    db.collection("lich-nhau").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+        const listDiv = document.getElementById('dataList');
+        listDiv.innerHTML = "";
+        if (snapshot.empty) {
+            listDiv.innerHTML = "<p style='color:gray'>Chưa có ai báo danh hết...</p>";
+            return;
+        }
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            const dateStr = new Date(data.time).toLocaleString('vi-VN', { 
+                weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' 
+            });
+            
+            listDiv.innerHTML += `
+                <div class="list-item">
+                    <div class="info">
+                        <strong>${data.name}</strong><br>
+                        <span>⏰ ${dateStr}</span>
+                    </div>
+                    <button class="edit-btn" onclick="editData('${data.name}', '${data.time}')">Thay đổi</button>
+                </div>
+            `;
+        });
+    });
+
+    // 3. Hàm Sửa: Đưa dữ liệu lên lại và cuộn màn hình lên đầu
+    function editData(name, time) {
+        document.getElementById('userName').value = name;
+        document.getElementById('userTime').value = time;
+        // Cuộn lên mượt mà để sửa
+        document.getElementById('form-top').scrollIntoView({ behavior: 'smooth' });
+    }
+</script>
+
+</body>
+</html>
